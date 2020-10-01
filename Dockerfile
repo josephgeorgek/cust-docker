@@ -1,5 +1,5 @@
-#FROM openjdk:8-jdk-alpine
-FROM maslick/minimalka:jdk11
+FROM openjdk:8-jdk-alpine
+#FROM maslick/minimalka:jdk11
 VOLUME /tmp
 
 EXPOSE 8080
