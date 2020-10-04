@@ -13,9 +13,9 @@ check the logs
 
 check the pods
 
->oc get pods
+> oc get pods
 
->oc get services
+> oc get services
 
 Last thing will be exposing our service externally:
 >oc expose svc/jg-springboot-demo-docker
