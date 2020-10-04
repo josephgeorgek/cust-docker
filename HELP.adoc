@@ -1,0 +1,142 @@
+# Getting Started
+
+add a new project 
+and then add new app from the spring boot mvn + Dockerfile
+
+
+>oc new-app registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift~https://github.com/josephgeorgek/docker-java-app.git  --name=jg-springboot-demo-docker
+
+
+check the logs
+
+> oc logs -f bc/jg-springboot-demo-docker
+
+check the pods
+
+>oc get pods
+
+>oc get services
+
+Last thing will be exposing our service externally:
+>oc expose svc/jg-springboot-demo-docker
+
+http://jg-springboot-demo-docker5-java-spring-docker.192.168.64.2.nip.io/
+
+
+
+
+
+set the limit
+
+> touch limits.json
+
+>{
+    "kind": "LimitRange",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "mylimits",
+        "creationTimestamp": null
+    },
+    "spec": {
+        "limits": [
+            {
+                "type": "Pod",
+                "max": {
+                    "cpu": "0.2",
+                    "memory": "1Gi"
+                },
+                "min": {
+                    "cpu": "30m",
+                    "memory": "5Mi"
+                }
+            },
+            {
+                "type": "Container",
+                "max": {
+                    "cpu": "1",
+                    "memory": "1Gi"
+                },
+                "min": {
+                    "cpu": "50m",
+                    "memory": "5Mi"
+                },
+                "default": {
+                    "cpu": "50m",
+                    "memory": "200Mi"
+                }
+            }
+        ]
+    }
+}
+
+switch to admin
+
+>oc login -u system:admin
+
+set tne limite
+>oc create -f limits.json -n java-spring-docker
+
+
+cross check the quota
+You can check that limits are available by querying through the mylimits object:
+
+> oc describe limits mylimits
+Name:       mylimits
+Namespace:  java-spring-docker
+Type        Resource  Min  Max   Default Request  Default Limit  Max Limit/Request Ratio
+----        --------  ---  ---   ---------------  -------------  -----------------------
+Pod         memory    5Mi  1Gi   -                -              -
+Pod         cpu       30m  200m  -                -              -
+Container   memory    5Mi  1Gi   200Mi            200Mi          -
+Container   cpu       50m  1     50m              50m            -
+
+Create the Autoscaler
+
+
+The last step will be creating the Autoscaler object which will describe the range of Pods which the Autoscaler will be allowed to create, based on the CPU threshold:
+
+>oc autoscale dc jg-springboot-demo-docker  --min 1 --max 3 --cpu-percent=25
+horizontalpodautoscaler.autoscaling/jg-springboot-demo-docker autoscaled
+
+>oc get services
+
+And expose the service through the router with:
+
+> oc expose svc/jg-springboot-demo-docker
+route.route.openshift.io/jg-springboot-demo-docker exposed
+
+Load Testing
+
+Now we can finally load test our application. The default route for the application is the following one:
+
+> oc get routes
+
+oc get routes
+NAME                        HOST/PORT                                                          PATH      SERVICES                    PORT       TERMINATION   WILDCARD
+jg-springboot-demo-docker   jg-springboot-demo-docker-java-spring-docker.192.168.64.4.nip.io             jg-springboot-demo-docker   8080-tcp                 None
+
+Now we can trigger a number of HTTP requests with:
+
+>for i in {1..500}; do curl http://jg-springboot-demo-docker-java-spring-docker.192.168.64.4.nip.io ; done;
+
+s you can see, the Autoscaler has created two additional Pods to meet the number of requests:
+
+Autoscaling openshift pods: an example with 
+
+### Reference Documentation
+For further reference, please consider the following sections:
+
+* [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
+* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/docs/2.3.4.RELEASE/maven-plugin/reference/html/)
+* [Create an OCI image](https://docs.spring.io/spring-boot/docs/2.3.4.RELEASE/maven-plugin/reference/html/#build-image)
+* [Spring Web](https://docs.spring.io/spring-boot/docs/2.3.4.RELEASE/reference/htmlsingle/#boot-features-developing-web-applications)
+* [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/2.3.4.RELEASE/reference/htmlsingle/#production-ready)
+
+### Guides
+The following guides illustrate how to use some features concretely:
+
+* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
+* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
+* [Building REST services with Spring](https://spring.io/guides/tutorials/bookmarks/)
+* [Building a RESTful Web Service with Spring Boot Actuator](https://spring.io/guides/gs/actuator-service/)
+
